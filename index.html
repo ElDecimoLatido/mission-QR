@@ -8,7 +8,6 @@
     :root{
       --bg:#000;
       --green:#00ff66;
-      --green-dim:#00aa44;
       --glow: 0 0 8px rgba(0,255,102,.55), 0 0 24px rgba(0,255,102,.25);
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
     }
@@ -23,52 +22,48 @@
       opacity: 0.25;
     }
 
-    /* Fondo tipo “scanlines” */
+    /* Scanlines */
     body::before{
       content:"";
       position:fixed; inset:0;
-      background:
-        repeating-linear-gradient(
-          to bottom,
-          rgba(0,255,102,.05),
-          rgba(0,255,102,.05) 1px,
-          rgba(0,0,0,0) 3px,
-          rgba(0,0,0,0) 6px
-        );
+      background:repeating-linear-gradient(
+        to bottom,
+        rgba(0,255,102,.05),
+        rgba(0,255,102,.05) 1px,
+        rgba(0,0,0,0) 3px,
+        rgba(0,0,0,0) 6px
+      );
       pointer-events:none;
-      mix-blend-mode:screen;
-      opacity:.35;
-      z-index: 1;
+      z-index:1;
     }
 
-    /* Sutil “viñeta” */
+    /* Viñeta */
     body::after{
       content:"";
       position:fixed; inset:-40px;
       background:radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,.75) 70%, rgba(0,0,0,.95) 100%);
       pointer-events:none;
-      z-index: 2;
+      z-index:2;
     }
 
     .wrap{
       min-height:100%;
       display:flex;
-      align-items:flex-start;
       justify-content:center;
       padding:24px;
-      box-sizing:border-box;
-      position: relative;
-      z-index: 3;
+      position:relative;
+      z-index:3;
     }
+
     .terminal{
-      width:min(920px, 100%);
+      width:min(920px,100%);
       border:1px solid rgba(0,255,102,.25);
-      box-shadow: var(--glow);
+      box-shadow:var(--glow);
       background:rgba(0,0,0,.65);
-      backdrop-filter: blur(2px);
       border-radius:14px;
       overflow:hidden;
     }
+
     .bar{
       display:flex;
       gap:8px;
@@ -77,20 +72,18 @@
       border-bottom:1px solid rgba(0,255,102,.18);
       background:rgba(0,0,0,.85);
     }
-    .dot{width:10px;height:10px;border-radius:99px; background:rgba(0,255,102,.35);}
-    .title{margin-left:auto; font-size:12px; color:rgba(0,255,102,.7)}
+    .dot{width:10px;height:10px;border-radius:99px;background:rgba(0,255,102,.35);}
+    .title{margin-left:auto;font-size:12px;color:rgba(0,255,102,.7)}
 
     .screen{
-      padding:16px 16px 18px;
+      padding:16px;
       font-size:16px;
       line-height:1.35;
       white-space:pre-wrap;
-      word-break:break-word;
-      text-shadow: var(--glow);
-
-      max-height: 75vh;
-      overflow-y: auto;
-      scroll-behavior: smooth;
+      text-shadow:var(--glow);
+      max-height:75vh;
+      overflow-y:auto;
+      scroll-behavior:smooth;
     }
 
     .cursor{
@@ -98,186 +91,250 @@
       width:10px;
       margin-left:2px;
       background:var(--green);
-      box-shadow: var(--glow);
-      animation: blink 1s step-end infinite;
-      transform: translateY(2px);
+      box-shadow:var(--glow);
+      animation:blink 1s step-end infinite;
       height:1em;
     }
-    @keyframes blink { 50% { opacity:0; } }
+    @keyframes blink{50%{opacity:0}}
 
     .hint{
       margin-top:12px;
-      font-size:12px;
-      color:rgba(0,255,102,.55);
       text-align:center;
-      max-width:920px;
-      width:100%;
     }
 
-    .replay{
-      margin-top:10px;
+    .btn{
       display:inline-block;
-      padding:10px 14px;
+      margin:6px;
+      padding:10px 16px;
       border:1px solid rgba(0,255,102,.25);
       border-radius:10px;
-      color:rgba(0,255,102,.85);
+      color:rgba(0,255,102,.9);
       background:rgba(0,0,0,.55);
       text-decoration:none;
       font-size:12px;
+    }
+
+    #geoStatus{
+      margin-top:8px;
+      font-size:12px;
+      color:rgba(0,255,102,.8);
     }
   </style>
 </head>
 <body>
 
-  <!-- MATRIX BACKGROUND -->
-  <canvas id="matrix"></canvas>
+<canvas id="matrix"></canvas>
 
-  <div class="wrap">
-    <div>
-      <div class="terminal" role="img" aria-label="Terminal de misión">
-        <div class="bar">
-          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-          <span class="title">SECURE CONSOLE • v1.0</span>
-        </div>
-        <div class="screen" id="screen"></div>
+<div class="wrap">
+  <div>
+    <div class="terminal">
+      <div class="bar">
+        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="title">SECURE CONSOLE • v1.0</span>
       </div>
+      <div class="screen" id="screen"></div>
+    </div>
 
-      <div class="hint">
-        <a class="replay" href="#" id="replay" style="display:none;">Reproducir de nuevo</a>
-      </div>
+    <div class="hint">
+      <a href="#" class="btn" id="replay" style="display:none;">Reproducir</a>
+      <a href="#" class="btn" id="checkin" style="display:none;">Validar ubicación</a>
+      <div id="geoStatus"></div>
     </div>
   </div>
+</div>
 
-  <script>
-    // ==== PERSONALIZA AQUÍ ====
-    const LINES = [
-      ">> Conexión establecida...",
-      ">> Verificando identidad...",
-      ">> Acceso concedido.",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      ">> MISIÓN: OPERACIÓN EL DECIMO LATIDO",
-      ">> OBJETIVO: Lean con atención todas las pistas que recibirán.",
-      "",
-      "",
-      "",
-      ">> INSTRUCCIONES:",
-      "    Mañana es un día muy especial,",
-      "    necesitamos que se bañen ",
-      "    aunque ya lo hayan hecho ayer Jaeluchis,",
-      "    depílate bien la entrepierna Armando,",
-      "    y perjumensen para estar listos temprano,",
-      "    no pierdan tiempo en nada más,",
-      "    pase lo que pase sigan el plan,",
-      "    no importa si ya tienen compromiso…",
-      "    ¡LO CANCELAN!",
-      "    no pidan ayuda de nadie,",
-      "    pueden documentarlo todo o guardarlo en su corazón.",
-      "",
-      "",
-      "",
-      ">> PISTA:",
-      "    ** Agua pasa por mi casa,",
-      "    ** cate de mi corazón,",
-      "    ** el sábado 7 de febrero,",
-      "    ** a las 10 de la mañana,",
-      "    ** la casa de los abuelos parece ser una buena opción.",
-      "",
-      "",
-      "",
-      ">> Fin de transmisión.",
-      "",
-      "",
-      "",
-      ""
-    ];
+<script>
+/* ===================== MENSAJE ===================== */
+const LINES = [
+  ">> Conexión establecida...",
+  ">> Verificando identidad...",
+  ">> Acceso concedido.",
+  "",
+  ">> MISIÓN: OPERACIÓN EL DÉCIMO LATIDO",
+  ">> OBJETIVO: Lean con atención todas las pistas que recibirán.",
+  "",
+  ">> INSTRUCCIONES:",
+  "    Mañana es un día muy especial,",
+  "    necesitamos que se bañen,",
+  "    aunque ya lo hayan hecho ayer Jaeluchis,",
+  "    depílate bien la entrepierna Armando,",
+  "    y perjúmensen para estar listos temprano,",
+  "    no pierdan tiempo en nada más,",
+  "    pase lo que pase sigan el plan,",
+  "    no importa si ya tienen compromiso…",
+  "    ¡LO CANCELAN!",
+  "    no pidan ayuda de nadie,",
+  "    pueden documentarlo todo o guardarlo en su corazón.",
+  "",
+  ">> PISTA:",
+  "    ** Agua pasa por mi casa,",
+  "    ** cate de mi corazón,",
+  "    ** el sábado 7 de febrero,",
+  "    ** a las 10 de la mañana,",
+  "    ** la casa de los abuelos parece ser una buena opción.",
+  "",
+  ">> Para continuar, valida tu ubicación.",
+  "",
+  ">> Fin de transmisión."
+];
 
-    // Velocidades (ms)
-    const TYPE_SPEED = 55;
-    const LINE_DELAY = 450;
-    const BOOT_DELAY = 650;
+/* ===================== VELOCIDAD ===================== */
+const TYPE_SPEED = 55;
+const LINE_DELAY = 450;
+const BOOT_DELAY = 650;
 
-    // ==== Motor de tecleo ====
-    const screen = document.getElementById("screen");
-    const replayBtn = document.getElementById("replay");
+/* ===================== GEO CONFIG ===================== */
+const CHECKPOINT_LAT = 20.578047843900535;
+const CHECKPOINT_LNG = -100.40561894053543;
+const RADIUS_METERS = 150;
 
-    function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+const DEST_LAT = 20.740117756916153;
+const DEST_LNG = -99.94133104084129;
 
-    function scrollToBottom() {
-      screen.scrollTop = screen.scrollHeight;
-    }
+/* ===================== TERMINAL ===================== */
+const screen = document.getElementById("screen");
+const replayBtn = document.getElementById("replay");
+const checkinBtn = document.getElementById("checkin");
+const geoStatus = document.getElementById("geoStatus");
 
-    async function typeAll(){
-      replayBtn.style.display = "none";
-      screen.textContent = "";
-      const cursor = document.createElement("span");
-      cursor.className = "cursor";
-      screen.appendChild(cursor);
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+function scrollToBottom(){ screen.scrollTop = screen.scrollHeight; }
 
-      await sleep(BOOT_DELAY);
+async function typeAll(){
+  replayBtn.style.display = "none";
+  checkinBtn.style.display = "none";
+  geoStatus.textContent = "";
+  screen.textContent = "";
+  const cursor = document.createElement("span");
+  cursor.className = "cursor";
+  screen.appendChild(cursor);
 
-      for (const line of LINES){
-        for (let i = 0; i < line.length; i++){
-          cursor.insertAdjacentText("beforebegin", line[i]);
-          scrollToBottom();
-          await sleep(TYPE_SPEED + Math.random()*12);
-        }
-        cursor.insertAdjacentText("beforebegin", "\n");
-        scrollToBottom();
-        await sleep(LINE_DELAY);
-      }
+  await sleep(BOOT_DELAY);
 
-      replayBtn.style.display = "inline-block";
+  for(const line of LINES){
+    for(let i=0;i<line.length;i++){
+      cursor.insertAdjacentText("beforebegin", line[i]);
       scrollToBottom();
+      await sleep(TYPE_SPEED + Math.random()*12);
     }
+    cursor.insertAdjacentText("beforebegin", "\n");
+    scrollToBottom();
+    await sleep(LINE_DELAY);
+  }
 
-    replayBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      typeAll();
-    });
+  replayBtn.style.display = "inline-block";
+  checkinBtn.style.display = "inline-block";
+}
 
-    // ===== MATRIX RAIN =====
-    const canvas = document.getElementById("matrix");
-    const ctx = canvas.getContext("2d");
+/* ===================== GEO ===================== */
+function toRad(deg){ return deg * Math.PI / 180; }
+function distanceMeters(lat1, lon1, lat2, lon2){
+  const R = 6371000;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat/2)**2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
 
-    function resizeCanvas(){
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+// 🟢 MENSAJE CINEMÁTICO + REDIRECCIÓN
+async function openGoogleMaps(){
+  const confirmLines = [
+    "",
+    ">> CHECKPOINT CONFIRMADO.",
+    ">> LOS DEL DÉCIMO LATIDO HAN PASADO LA PRUEBA.",
+    ">> COORDENADAS DESBLOQUEADAS..."
+  ];
+
+  for (const line of confirmLines) {
+    for (let i = 0; i < line.length; i++) {
+      screen.insertAdjacentText("beforeend", line[i]);
+      scrollToBottom();
+      await sleep(TYPE_SPEED + Math.random() * 12);
     }
-    resizeCanvas();
-    window.addEventListener("resize", resizeCanvas);
+    screen.insertAdjacentText("beforeend", "\n");
+    scrollToBottom();
+    await sleep(LINE_DELAY);
+  }
 
-    const letters = "アカサタナハマヤラワ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$#@";
-    const fontSize = 18;
-    let columns = Math.floor(canvas.width / fontSize);
-    let drops = Array(columns).fill(1);
+  await sleep(2000);
 
-    function drawMatrix(){
-      ctx.fillStyle = "rgba(0, 0, 0, 0.08)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const url = `https://www.google.com/maps/dir/?api=1&destination=${DEST_LAT},${DEST_LNG}&travelmode=driving`;
+  window.location.href = url;
+}
 
-      ctx.fillStyle = "#00ff66";
-      ctx.font = fontSize + "px monospace";
+checkinBtn.addEventListener("click", e => {
+  e.preventDefault();
+  geoStatus.textContent = ">> Solicitando ubicación...";
 
-      for (let i = 0; i < drops.length; i++){
-        const text = letters[Math.floor(Math.random() * letters.length)];
-        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+  if(!navigator.geolocation){
+    geoStatus.textContent = ">> Geolocalización no soportada.";
+    return;
+  }
 
-        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975){
-          drops[i] = 0;
-        }
-        drops[i]++;
-      }
+  navigator.geolocation.getCurrentPosition(pos => {
+    const {latitude, longitude} = pos.coords;
+    const dist = distanceMeters(latitude, longitude, CHECKPOINT_LAT, CHECKPOINT_LNG);
+
+    if(dist <= RADIUS_METERS){
+      geoStatus.textContent = ">> Checkpoint confirmado.";
+      openGoogleMaps();
+    } else {
+      geoStatus.textContent = `>> Aún no estás en el punto. Distancia: ~${Math.round(dist)}m`;
     }
+  }, err => {
+    geoStatus.textContent = ">> No se pudo obtener la ubicación. Permiso denegado o señal débil.";
+  }, {
+    enableHighAccuracy:true,
+    timeout:10000,
+    maximumAge:0
+  });
+});
 
-    setInterval(drawMatrix, 40);
+/* ===================== BOTONES ===================== */
+replayBtn.addEventListener("click", e => {
+  e.preventDefault();
+  typeAll();
+});
 
-    // Auto-inicio al abrir
-    typeAll();
-  </script>
+/* ===================== MATRIX ===================== */
+const canvas = document.getElementById("matrix");
+const ctx = canvas.getContext("2d");
+
+function resizeCanvas(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
+
+const letters = "アカサタナハマヤラワ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$#@";
+const fontSize = 18;
+let columns = Math.floor(canvas.width / fontSize);
+let drops = Array(columns).fill(1);
+
+function drawMatrix(){
+  ctx.fillStyle = "rgba(0,0,0,0.08)";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = "#00ff66";
+  ctx.font = fontSize + "px monospace";
+
+  for(let i=0;i<drops.length;i++){
+    const text = letters[Math.floor(Math.random()*letters.length)];
+    ctx.fillText(text, i*fontSize, drops[i]*fontSize);
+
+    if(drops[i]*fontSize > canvas.height && Math.random() > 0.975){
+      drops[i] = 0;
+    }
+    drops[i]++;
+  }
+}
+setInterval(drawMatrix, 40);
+
+/* ===================== START ===================== */
+typeAll();
+</script>
 </body>
 </html>
