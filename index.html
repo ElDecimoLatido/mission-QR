@@ -14,7 +14,6 @@
     }
     html,body{height:100%; margin:0; background:var(--bg); color:var(--green); font-family:var(--mono);}
 
-    /* ===== MATRIX CANVAS ===== */
     #matrix{
       position: fixed;
       inset: 0;
@@ -23,7 +22,6 @@
       opacity: 0.25;
     }
 
-    /* scanlines */
     body::before{
       content:"";
       position:fixed; inset:0;
@@ -41,7 +39,6 @@
       z-index: 1;
     }
 
-    /* viñeta */
     body::after{
       content:"";
       position:fixed; inset:-40px;
@@ -113,31 +110,17 @@
     }
     @keyframes blink { 50% { opacity:0; } }
 
-    /* ===== Intro ===== */
-    .intro{
-      width:100%;
-      margin-top:16px;
-      padding:14px 16px;
-      border:1px solid rgba(0,255,102,.22);
-      border-radius:12px;
-      background:rgba(0,0,0,.55);
-      box-shadow: 0 0 10px rgba(0,255,102,.12);
+    /* Prompt parpadeante dentro de la terminal */
+    .blink{
+      animation: blinkText 1s steps(2, end) infinite;
+      color: rgba(0,255,102,.95);
       text-shadow: var(--glow);
-      box-sizing:border-box;
+      font-weight: 600;
+      letter-spacing: .2px;
     }
-    .intro .headline{
-      font-size:15px;
-      margin:0 0 8px 0;
-      color: rgba(0,255,102,.92);
-    }
-    .intro .body{
-      font-size:13px;
-      margin:0;
-      color: rgba(0,255,102,.72);
-      line-height:1.35;
-    }
+    @keyframes blinkText { 50% { opacity:0; } }
 
-    /* ===== Botones ===== */
+    /* Botones */
     .actions{
       width:100%;
       display:flex;
@@ -180,8 +163,6 @@
 
     @media (max-width: 520px){
       .btn{ font-size:14px; height:52px; padding:10px 10px; }
-      .intro .headline{ font-size:14px; }
-      .intro .body{ font-size:12.5px; }
     }
   </style>
 </head>
@@ -199,30 +180,19 @@
       <div class="terminal" role="img" aria-label="Terminal de misión">
         <div class="bar">
           <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-          <span class="title">SECURE CONSOLE • v1.0.4</span>
+          <span class="title">SECURE CONSOLE • v1.0.6</span>
         </div>
         <div class="screen" id="screen"></div>
       </div>
 
-      <!-- ✅ INTRO + ACEPTAR MISIÓN (se ve primero) -->
-      <div class="intro" id="intro">
-        <p class="headline">>> Se ha detectado una misión pendiente.</p>
-        <p class="body">
-          Necesitamos su apoyo inmediato. Si aceptan, se habilitará una transmisión con instrucciones.
-          <br>¿Proceder?
-        </p>
-      </div>
-
-      <div class="actions" id="acceptWrap">
+      <!-- ✅ Botón Aceptar (aparece tras la intro) -->
+      <div class="actions" id="acceptWrap" style="display:none;">
         <a class="btn primary" href="#" id="acceptBtn">Aceptar misión</a>
       </div>
 
-      <!-- ✅ BOTONES FINALES (al terminar) -->
+      <!-- ✅ Botones finales -->
       <div class="actions" id="finalActions" style="display:none;">
-        <!-- izquierda -->
         <a class="btn" href="#" id="replayBtn">Ver de nuevo</a>
-
-        <!-- derecha -->
         <a class="btn"
            id="musicBtn"
            href="https://music.apple.com/mx/playlist/operaci%C3%B3n-el-decimo-latido/pl.u-PDb40YptZYj5bz"
@@ -235,7 +205,17 @@
   </div>
 
   <script>
-    const LINES = [
+    // Intro (se teclea al entrar)
+    const INTRO_LINES = [
+      ">> Alerta: misión pendiente detectada.",
+      ">> Se requiere su apoyo inmediato.",
+      ">> Si aceptan, se habilitará una transmisión con instrucciones.",
+      "",
+      ">> ¿Proceder?"
+    ];
+
+    // Mensaje principal (se teclea al aceptar)
+    const MAIN_LINES = [
       ">> Conexión establecida...",
       ">> Verificando identidad...",
       ">> Acceso concedido.",
@@ -284,33 +264,30 @@
       ">> Fin de transmisión."
     ];
 
+    // Velocidades
     const TYPE_SPEED = 55;
     const LINE_DELAY = 450;
     const BOOT_DELAY = 650;
 
     const screen = document.getElementById("screen");
-    const intro = document.getElementById("intro");
     const acceptWrap = document.getElementById("acceptWrap");
     const acceptBtn = document.getElementById("acceptBtn");
     const finalActions = document.getElementById("finalActions");
     const replayBtn = document.getElementById("replayBtn");
     const bgAudio = document.getElementById("bgAudio");
 
-    let started = false;
+    let missionAccepted = false;
 
     function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
     function scrollToBottom(){ screen.scrollTop = screen.scrollHeight; }
 
     function startBackgroundAudio(){
       if (!bgAudio) return;
-      bgAudio.volume = 0.18; // volumen bajo
+      bgAudio.volume = 0.18;
       bgAudio.play().catch(()=>{});
     }
 
-    async function typeAll(){
-      // oculta botones finales mientras escribe
-      finalActions.style.display = "none";
-
+    async function typeLines(lines){
       screen.textContent = "";
       const cursor = document.createElement("span");
       cursor.className = "cursor";
@@ -318,7 +295,7 @@
 
       await sleep(BOOT_DELAY);
 
-      for (const line of LINES){
+      for (const line of lines){
         for (let i = 0; i < line.length; i++){
           cursor.insertAdjacentText("beforebegin", line[i]);
           scrollToBottom();
@@ -328,37 +305,98 @@
         scrollToBottom();
         await sleep(LINE_DELAY);
       }
+    }
 
-      // al final mostramos botones finales
+    function addBlinkPrompt(){
+      // Agrega un prompt parpadeante dentro de la terminal
+      // sin romper el cursor (la intro ya terminó, no hay cursor ya)
+      const prompt = document.createElement("span");
+      prompt.className = "blink";
+      prompt.textContent = '[PRESIONE "ACEPTAR MISIÓN"]';
+      screen.appendChild(prompt);
+      scrollToBottom();
+    }
+
+    async function runIntro(){
+      acceptWrap.style.display = "none";
+      finalActions.style.display = "none";
+
+      await typeLines(INTRO_LINES);
+
+      // prompt parpadeante dentro de la terminal
+      screen.insertAdjacentText("beforeend", "\n");
+      addBlinkPrompt();
+
+      // mostrar botón aceptar debajo
+      acceptWrap.style.display = "flex";
+    }
+
+    async function runMain(){
+      // Oculta aceptar y finales mientras escribe
+      acceptWrap.style.display = "none";
+      finalActions.style.display = "none";
+
+      await typeLines(MAIN_LINES);
+
       finalActions.style.display = "flex";
       scrollToBottom();
     }
 
-    function startMission(){
-      if (started) return;
-      started = true;
-
-      // ✅ ocultar intro + aceptar
-      intro.style.display = "none";
-      acceptWrap.style.display = "none";
-
-      // ✅ iniciar audio + tecleo
-      startBackgroundAudio();
-      typeAll();
-    }
-
     acceptBtn.addEventListener("click", (e) => {
       e.preventDefault();
-      startMission();
+      if (missionAccepted) return;
+      missionAccepted = true;
+
+      // Ocultar UI de intro
+      acceptWrap.style.display = "none";
+
+      // Arrancar música + misión
+      startBackgroundAudio();
+      runMain();
     });
 
     replayBtn.addEventListener("click", (e) => {
       e.preventDefault();
-      // replay no vuelve a mostrar intro: solo repite el mensaje
-      typeAll();
+      runMain();
     });
 
-    // Nota: ya no auto-inicia al entrar; se inicia al aceptar para permitir audio.
+    // ===== MATRIX RAIN =====
+    const canvas = document.getElementById("matrix");
+    const ctx = canvas.getContext("2d");
+
+    function resizeCanvas(){
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+
+    const letters = "アカサタナハマヤラワ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$#@";
+    const fontSize = 18;
+    let columns = Math.floor(canvas.width / fontSize);
+    let drops = Array(columns).fill(1);
+
+    function drawMatrix(){
+      ctx.fillStyle = "rgba(0, 0, 0, 0.08)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "#00ff66";
+      ctx.font = fontSize + "px monospace";
+
+      for (let i = 0; i < drops.length; i++){
+        const text = letters[Math.floor(Math.random() * letters.length)];
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975){
+          drops[i] = 0;
+        }
+        drops[i]++;
+      }
+    }
+    setInterval(drawMatrix, 40);
+
+    // ✅ Al entrar: intro con tecleo + prompt parpadeante
+    runIntro();
   </script>
 </body>
 </html>
