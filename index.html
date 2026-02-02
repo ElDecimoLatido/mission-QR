@@ -61,7 +61,7 @@
       z-index: 3;
     }
 
-    /* ✅ NUEVO: centra como bloque la terminal + hint */
+    /* centra como bloque la terminal + hint */
     .wrap > div{
       width: min(920px, 100%);
       display:flex;
@@ -114,19 +114,21 @@
     }
     @keyframes blink { 50% { opacity:0; } }
 
-    /* ✅ NUEVO: centra el botón dentro del contenedor */
+    /* centra los botones */
     .hint{
       margin-top:12px;
       width:100%;
       display:flex;
       justify-content:center;
+      gap:12px; /* ✅ espacio entre botones */
+      flex-wrap:wrap; /* ✅ por si en móvil se apilan */
     }
 
     .replay{
       margin-top:25px;
-      display:inline-flex;        /* ✅ centra texto */
-      align-items:center;         /* ✅ vertical */
-      justify-content:center;     /* ✅ horizontal */
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
       padding:10px 14px;
       border:1px solid rgba(0,255,102,.25);
       border-radius:10px;
@@ -135,7 +137,7 @@
       text-decoration:none;
       font-size:16px;
       height:56px;
-      min-width:220px;            /* opcional: se ve más “botón” */
+      min-width:220px;
     }
   </style>
 </head>
@@ -156,6 +158,16 @@
 
       <div class="hint">
         <a class="replay" href="#" id="replay" style="display:none;">Ver de nuevo</a>
+
+        <!-- ✅ NUEVO BOTÓN: Apple Music -->
+        <a class="replay"
+           id="musicBtn"
+           style="display:none;"
+           href="https://music.apple.com/mx/playlist/operaci%C3%B3n-el-decimo-latido/pl.u-PDb40YptZYj5bz"
+           target="_blank"
+           rel="noopener noreferrer">
+          Abrir Soundtrack
+        </a>
       </div>
     </div>
   </div>
@@ -201,6 +213,13 @@
       "",
       "",
       "",
+      "   Para hacer este viaje mas ameno",
+      "   hemos creado una lista de reproducción",
+      "   con una selección curada especialmente para ustedes",
+      "   enjoy ❤️",
+      "",
+      "",
+      "",
       ">> Fin de transmisión."
     ];
 
@@ -212,6 +231,7 @@
     // ==== Motor de tecleo ====
     const screen = document.getElementById("screen");
     const replayBtn = document.getElementById("replay");
+    const musicBtn = document.getElementById("musicBtn");
 
     function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
@@ -221,6 +241,7 @@
 
     async function typeAll(){
       replayBtn.style.display = "none";
+      musicBtn.style.display = "none";
       screen.textContent = "";
       const cursor = document.createElement("span");
       cursor.className = "cursor";
@@ -240,6 +261,7 @@
       }
 
       replayBtn.style.display = "inline-flex";
+      musicBtn.style.display = "inline-flex";
       scrollToBottom();
     }
 
