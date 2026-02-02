@@ -110,7 +110,6 @@
     }
     @keyframes blink { 50% { opacity:0; } }
 
-    /* Prompt parpadeante dentro de la terminal */
     .blink{
       animation: blinkText 1s steps(2, end) infinite;
       color: rgba(0,255,102,.95);
@@ -120,7 +119,6 @@
     }
     @keyframes blinkText { 50% { opacity:0; } }
 
-    /* Botones */
     .actions{
       width:100%;
       display:flex;
@@ -170,9 +168,14 @@
 
   <canvas id="matrix"></canvas>
 
-  <!-- Música de fondo (sube un audio legal a /audio/bg.mp3) -->
+  <!-- ✅ Música de fondo -->
   <audio id="bgAudio" preload="auto" loop>
     <source src="audio/bg.mp3" type="audio/mpeg">
+  </audio>
+
+  <!-- ✅ Sonido de tecleo -->
+  <audio id="typeAudio" preload="auto">
+    <source src="audio/tack.mp3" type="audio/mpeg">
   </audio>
 
   <div class="wrap">
@@ -180,17 +183,15 @@
       <div class="terminal" role="img" aria-label="Terminal de misión">
         <div class="bar">
           <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-          <span class="title">SECURE CONSOLE • v1.0.6</span>
+          <span class="title">SECURE CONSOLE • v1.0.7</span>
         </div>
         <div class="screen" id="screen"></div>
       </div>
 
-      <!-- ✅ Botón Aceptar (aparece tras la intro) -->
       <div class="actions" id="acceptWrap" style="display:none;">
         <a class="btn primary" href="#" id="acceptBtn">Aceptar misión</a>
       </div>
 
-      <!-- ✅ Botones finales -->
       <div class="actions" id="finalActions" style="display:none;">
         <a class="btn" href="#" id="replayBtn">Ver de nuevo</a>
         <a class="btn"
@@ -205,30 +206,18 @@
   </div>
 
   <script>
-    // Intro (se teclea al entrar)
     const INTRO_LINES = [
       ">> Alerta: misión pendiente detectada.",
-      ">> Jael y Armando...",
       ">> Se requiere su apoyo inmediato.",
-      ">> Si aceptan, se habilitará una transmisión con instrucciones.",
-      ">> Habiliten el audio para recibir la transmisión.",
+      ">> Active su audio y asegure un perímetro confidencial.",
       ">> Esta transmisión es solo para agentes autorizados.",
-      "",
-      "",
       "",
       ">> ¿Proceder?"
     ];
 
-    // Mensaje principal (se teclea al aceptar)
     const MAIN_LINES = [
       ">> Conexión establecida...",
       ">> Verificando identidad...",
-      ".",
-      ".",
-      ".",
-      ".",
-      ".",
-      ".",
       ">> Acceso concedido.",
       "",
       "",
@@ -256,7 +245,7 @@
       "",
       "",
       "",
-      ">> PISTA 1:",
+      ">> PISTA:",
       "    Agua pasa por mi casa,",
       "    cate de mi corazón,",
       "    el sábado 7 de febrero,",
@@ -275,19 +264,26 @@
       ">> Fin de transmisión."
     ];
 
-    // Velocidades
     const TYPE_SPEED = 55;
     const LINE_DELAY = 450;
     const BOOT_DELAY = 650;
+
+    // ✅ Ajustes del tecleo (sonido)
+    const TYPE_TICK_EVERY = 3;     // cada cuántas letras suena el tack (2 = más seguido)
+    const TYPE_TICK_VOLUME = 0.25; // volumen del tack
 
     const screen = document.getElementById("screen");
     const acceptWrap = document.getElementById("acceptWrap");
     const acceptBtn = document.getElementById("acceptBtn");
     const finalActions = document.getElementById("finalActions");
     const replayBtn = document.getElementById("replayBtn");
+
     const bgAudio = document.getElementById("bgAudio");
+    const typeAudio = document.getElementById("typeAudio");
 
     let missionAccepted = false;
+    let audioUnlocked = false;
+    let charCount = 0;
 
     function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
     function scrollToBottom(){ screen.scrollTop = screen.scrollHeight; }
@@ -298,7 +294,30 @@
       bgAudio.play().catch(()=>{});
     }
 
-    async function typeLines(lines){
+    // ✅ “Desbloqueo” de audio en iOS: se hace tras un click
+    function unlockAudio(){
+      if (audioUnlocked) return;
+      audioUnlocked = true;
+
+      if (typeAudio){
+        typeAudio.volume = TYPE_TICK_VOLUME;
+        typeAudio.play().then(() => {
+          typeAudio.pause();
+          typeAudio.currentTime = 0;
+        }).catch(()=>{});
+      }
+    }
+
+    function playTypeTick(){
+      if (!audioUnlocked || !typeAudio) return;
+      try{
+        typeAudio.currentTime = 0;
+        typeAudio.play().catch(()=>{});
+      }catch(_){}
+    }
+
+    async function typeLines(lines, withTypeSound){
+      charCount = 0;
       screen.textContent = "";
       const cursor = document.createElement("span");
       cursor.className = "cursor";
@@ -310,6 +329,14 @@
         for (let i = 0; i < line.length; i++){
           cursor.insertAdjacentText("beforebegin", line[i]);
           scrollToBottom();
+
+          if (withTypeSound){
+            charCount++;
+            if (charCount % TYPE_TICK_EVERY === 0){
+              playTypeTick();
+            }
+          }
+
           await sleep(TYPE_SPEED + Math.random()*12);
         }
         cursor.insertAdjacentText("beforebegin", "\n");
@@ -319,8 +346,7 @@
     }
 
     function addBlinkPrompt(){
-      // Agrega un prompt parpadeante dentro de la terminal
-      // sin romper el cursor (la intro ya terminó, no hay cursor ya)
+      screen.insertAdjacentText("beforeend", "\n");
       const prompt = document.createElement("span");
       prompt.className = "blink";
       prompt.textContent = '[PRESIONE "ACEPTAR MISIÓN"]';
@@ -332,22 +358,19 @@
       acceptWrap.style.display = "none";
       finalActions.style.display = "none";
 
-      await typeLines(INTRO_LINES);
+      // Intro SIN sonido (no hay click aún)
+      await typeLines(INTRO_LINES, false);
 
-      // prompt parpadeante dentro de la terminal
-      screen.insertAdjacentText("beforeend", "\n");
       addBlinkPrompt();
-
-      // mostrar botón aceptar debajo
       acceptWrap.style.display = "flex";
     }
 
     async function runMain(){
-      // Oculta aceptar y finales mientras escribe
       acceptWrap.style.display = "none";
       finalActions.style.display = "none";
 
-      await typeLines(MAIN_LINES);
+      // Main CON sonido de tecleo
+      await typeLines(MAIN_LINES, true);
 
       finalActions.style.display = "flex";
       scrollToBottom();
@@ -358,11 +381,14 @@
       if (missionAccepted) return;
       missionAccepted = true;
 
-      // Ocultar UI de intro
+      // ✅ ocultar botón aceptar
       acceptWrap.style.display = "none";
 
-      // Arrancar música + misión
+      // ✅ desbloquea audio y arranca música
+      unlockAudio();
       startBackgroundAudio();
+
+      // ✅ misión principal
       runMain();
     });
 
@@ -406,7 +432,7 @@
     }
     setInterval(drawMatrix, 40);
 
-    // ✅ Al entrar: intro con tecleo + prompt parpadeante
+    // ✅ Al entrar: intro con tecleo
     runIntro();
   </script>
 </body>
