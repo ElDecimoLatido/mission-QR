@@ -114,14 +114,16 @@
     }
     @keyframes blink { 50% { opacity:0; } }
 
-    /* centra los botones */
+    /* ✅ Botones: horizontal y sin desbordar en móvil */
     .hint{
       margin-top:12px;
       width:100%;
       display:flex;
       justify-content:center;
-      gap:12px; /* ✅ espacio entre botones */
-      flex-wrap:nowrap;
+      gap:12px;
+      flex-wrap:nowrap; /* los queremos en una fila */
+      padding: 0 12px;  /* para que no peguen al borde en móvil */
+      box-sizing:border-box;
     }
 
     .replay{
@@ -137,7 +139,24 @@
       text-decoration:none;
       font-size:16px;
       height:56px;
-      min-width:220px;
+
+      /* ✅ clave para que se ajusten y no se salgan */
+      min-width:0;
+      width:100%;
+      flex: 1 1 0;
+      box-sizing:border-box;
+
+      /* evita saltos raros (puedes cambiar a normal si quieres 2 líneas) */
+      white-space:nowrap;
+    }
+
+    /* Ajustes para pantallas pequeñas */
+    @media (max-width: 520px){
+      .replay{
+        font-size:14px;
+        height:52px;
+        padding:10px 10px;
+      }
     }
   </style>
 </head>
@@ -157,7 +176,7 @@
       </div>
 
       <div class="hint">
-        <!-- ✅ NUEVO BOTÓN: Apple Music -->
+        <!-- ✅ BOTÓN: Apple Music -->
         <a class="replay"
            id="musicBtn"
            style="display:none;"
@@ -167,6 +186,7 @@
           Abrir Soundtrack
         </a>
 
+        <!-- ✅ BOTÓN: Replay -->
         <a class="replay" href="#" id="replay" style="display:none;">Ver de nuevo</a>
       </div>
     </div>
