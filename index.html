@@ -23,7 +23,6 @@
       opacity: 0.25;
     }
 
-    /* Fondo tipo “scanlines” */
     body::before{
       content:"";
       position:fixed; inset:0;
@@ -41,7 +40,6 @@
       z-index: 1;
     }
 
-    /* Sutil “viñeta” */
     body::after{
       content:"";
       position:fixed; inset:-40px;
@@ -61,7 +59,6 @@
       z-index: 3;
     }
 
-    /* centra como bloque la terminal + hint */
     .wrap > div{
       width: min(920px, 100%);
       display:flex;
@@ -114,20 +111,20 @@
     }
     @keyframes blink { 50% { opacity:0; } }
 
-    /* ✅ Botones: horizontal y sin desbordar en móvil */
+    /* Botones (móvil friendly) */
     .hint{
       margin-top:12px;
       width:100%;
       display:flex;
       justify-content:center;
       gap:12px;
-      flex-wrap:nowrap; /* los queremos en una fila */
-      padding: 0 12px;  /* para que no peguen al borde en móvil */
+      flex-wrap:nowrap;
+      padding: 0 12px;
       box-sizing:border-box;
     }
 
-    .replay{
-      margin-top:25px;
+    .btn{
+      margin-top:18px;
       display:inline-flex;
       align-items:center;
       justify-content:center;
@@ -140,47 +137,54 @@
       font-size:16px;
       height:56px;
 
-      /* ✅ clave para que se ajusten y no se salgan */
       min-width:0;
       width:100%;
       flex: 1 1 0;
       box-sizing:border-box;
-
-      /* evita saltos raros (puedes cambiar a normal si quieres 2 líneas) */
       white-space:nowrap;
+      user-select:none;
     }
 
-    /* Ajustes para pantallas pequeñas */
+    /* Botón principal (Aceptar misión) un poco más “importante” */
+    .btn.primary{
+      border-color: rgba(0,255,102,.55);
+      box-shadow: var(--glow);
+      background: rgba(0,0,0,.70);
+      max-width: 360px;
+      width: min(360px, 100%);
+      flex: 0 1 auto;
+    }
+
     @media (max-width: 520px){
-      .replay{
-        font-size:14px;
-        height:52px;
-        padding:10px 10px;
-      }
+      .btn{ font-size:14px; height:52px; padding:10px 10px; }
     }
   </style>
 </head>
 <body>
 
-  <!-- MATRIX BACKGROUND -->
   <canvas id="matrix"></canvas>
+
+  <!-- ✅ Música de fondo (sube tu archivo legal a /audio/bg.mp3) -->
+  <audio id="bgAudio" preload="auto" loop>
+    <source src="audio/bg.mp3" type="audio/mpeg">
+  </audio>
 
   <div class="wrap">
     <div>
       <div class="terminal" role="img" aria-label="Terminal de misión">
         <div class="bar">
           <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-          <span class="title">SECURE CONSOLE • v1.0.1</span>
+          <span class="title">SECURE CONSOLE • v1.0.2</span>
         </div>
         <div class="screen" id="screen"></div>
       </div>
 
+      <!-- ✅ Botón inicial -->
+      <a class="btn primary" href="#" id="acceptBtn">Aceptar misión</a>
+
+      <!-- ✅ Botones finales -->
       <div class="hint">
-        <!-- ✅ BOTÓN: Replay -->
-        <a class="replay" href="#" id="replay" style="display:none;">Ver de nuevo</a>
-  
-        <!-- ✅ BOTÓN: Apple Music -->
-        <a class="replay"
+        <a class="btn"
            id="musicBtn"
            style="display:none;"
            href="https://music.apple.com/mx/playlist/operaci%C3%B3n-el-decimo-latido/pl.u-PDb40YptZYj5bz"
@@ -188,12 +192,13 @@
            rel="noopener noreferrer">
           Abrir Soundtrack
         </a>
+
+        <a class="btn" href="#" id="replay" style="display:none;">Ver de nuevo</a>
       </div>
     </div>
   </div>
 
   <script>
-    // ==== PERSONALIZA AQUÍ ====
     const LINES = [
       ">> Conexión establecida...",
       ">> Verificando identidad...",
@@ -243,15 +248,17 @@
       ">> Fin de transmisión."
     ];
 
-    // Velocidades (ms)
     const TYPE_SPEED = 55;
     const LINE_DELAY = 450;
     const BOOT_DELAY = 650;
 
-    // ==== Motor de tecleo ====
     const screen = document.getElementById("screen");
     const replayBtn = document.getElementById("replay");
     const musicBtn = document.getElementById("musicBtn");
+    const acceptBtn = document.getElementById("acceptBtn");
+    const bgAudio = document.getElementById("bgAudio");
+
+    let started = false;
 
     function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
@@ -259,10 +266,21 @@
       screen.scrollTop = screen.scrollHeight;
     }
 
+    async function startBackgroundAudio(){
+      if (!bgAudio) return;
+      try{
+        bgAudio.volume = 0.18;   // ✅ volumen bajo
+        await bgAudio.play();    // ✅ sólo funciona tras tap/click
+      }catch(e){
+        // si el navegador bloquea por alguna razón, no rompemos
+      }
+    }
+
     async function typeAll(){
       replayBtn.style.display = "none";
       musicBtn.style.display = "none";
       screen.textContent = "";
+
       const cursor = document.createElement("span");
       cursor.className = "cursor";
       screen.appendChild(cursor);
@@ -285,9 +303,21 @@
       scrollToBottom();
     }
 
-    replayBtn.addEventListener("click", (e) => {
+    // ✅ Botón inicial: activa música y comienza el mensaje
+    acceptBtn.addEventListener("click", async (e) => {
       e.preventDefault();
-      typeAll();
+      if (started) return;
+      started = true;
+
+      acceptBtn.style.display = "none"; // desaparece el botón
+      await startBackgroundAudio();
+      await typeAll();
+    });
+
+    // ✅ Replay: reinicia el mensaje (música sigue)
+    replayBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      await typeAll();
     });
 
     // ===== MATRIX RAIN =====
@@ -323,11 +353,9 @@
         drops[i]++;
       }
     }
-
     setInterval(drawMatrix, 40);
 
-    // Auto-inicio al abrir
-    typeAll();
+    // Nota: ya no auto-iniciamos typeAll() para obligar el click y poder reproducir audio.
   </script>
 </body>
 </html>
