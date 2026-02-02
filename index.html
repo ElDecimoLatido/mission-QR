@@ -14,7 +14,6 @@
     }
     html,body{height:100%; margin:0; background:var(--bg); color:var(--green); font-family:var(--mono);}
 
-    /* ===== MATRIX CANVAS ===== */
     #matrix{
       position: fixed;
       inset: 0;
@@ -111,7 +110,6 @@
     }
     @keyframes blink { 50% { opacity:0; } }
 
-    /* Botones (móvil friendly) */
     .hint{
       margin-top:12px;
       width:100%;
@@ -145,7 +143,6 @@
       user-select:none;
     }
 
-    /* Botón principal (Aceptar misión) un poco más “importante” */
     .btn.primary{
       border-color: rgba(0,255,102,.55);
       box-shadow: var(--glow);
@@ -164,7 +161,6 @@
 
   <canvas id="matrix"></canvas>
 
-  <!-- ✅ Música de fondo (sube tu archivo legal a /audio/bg.mp3) -->
   <audio id="bgAudio" preload="auto" loop>
     <source src="audio/bg.mp3" type="audio/mpeg">
   </audio>
@@ -174,16 +170,18 @@
       <div class="terminal" role="img" aria-label="Terminal de misión">
         <div class="bar">
           <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-          <span class="title">SECURE CONSOLE • v1.0.2</span>
+          <span class="title">SECURE CONSOLE • v1.0.3</span>
         </div>
         <div class="screen" id="screen"></div>
       </div>
 
-      <!-- ✅ Botón inicial -->
-      <a class="btn primary" href="#" id="acceptBtn">Aceptar misión</a>
+      <!-- ✅ AHORA ARRIBA VA "VER DE NUEVO" (pero al inicio arranca la misión) -->
+      <a class="btn primary" href="#" id="replayTop">Ver de nuevo</a>
 
-      <!-- ✅ Botones finales -->
+      <!-- ✅ ABAJO, en la fila, va "ACEPTAR MISIÓN" + "ABRIR SOUNDTRACK" -->
       <div class="hint">
+        <a class="btn" href="#" id="acceptBtn" style="display:none;">Aceptar misión</a>
+
         <a class="btn"
            id="musicBtn"
            style="display:none;"
@@ -192,8 +190,6 @@
            rel="noopener noreferrer">
           Abrir Soundtrack
         </a>
-
-        <a class="btn" href="#" id="replay" style="display:none;">Ver de nuevo</a>
       </div>
     </div>
   </div>
@@ -253,34 +249,28 @@
     const BOOT_DELAY = 650;
 
     const screen = document.getElementById("screen");
-    const replayBtn = document.getElementById("replay");
-    const musicBtn = document.getElementById("musicBtn");
+    const replayTop = document.getElementById("replayTop");
     const acceptBtn = document.getElementById("acceptBtn");
+    const musicBtn = document.getElementById("musicBtn");
     const bgAudio = document.getElementById("bgAudio");
 
     let started = false;
 
     function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+    function scrollToBottom(){ screen.scrollTop = screen.scrollHeight; }
 
-    function scrollToBottom() {
-      screen.scrollTop = screen.scrollHeight;
-    }
-
-    async function startBackgroundAudio(){
+    function startBackgroundAudio(){
       if (!bgAudio) return;
-      try{
-        bgAudio.volume = 0.18;   // ✅ volumen bajo
-        await bgAudio.play();    // ✅ sólo funciona tras tap/click
-      }catch(e){
-        // si el navegador bloquea por alguna razón, no rompemos
-      }
+      bgAudio.volume = 0.18;
+      bgAudio.play().catch(()=>{});
     }
 
     async function typeAll(){
-      replayBtn.style.display = "none";
+      // oculta botones de abajo mientras se escribe
+      acceptBtn.style.display = "none";
       musicBtn.style.display = "none";
-      screen.textContent = "";
 
+      screen.textContent = "";
       const cursor = document.createElement("span");
       cursor.className = "cursor";
       screen.appendChild(cursor);
@@ -298,26 +288,32 @@
         await sleep(LINE_DELAY);
       }
 
-      replayBtn.style.display = "inline-flex";
+      // al final mostramos botones de abajo
+      acceptBtn.style.display = "inline-flex";
       musicBtn.style.display = "inline-flex";
       scrollToBottom();
     }
 
-    // ✅ Botón inicial: activa música y comienza el mensaje
-    acceptBtn.addEventListener("click", async (e) => {
+    // ✅ Botón de arriba:
+    // - Primera vez: inicia misión (audio + mensaje)
+    // - Después: replay normal
+    replayTop.addEventListener("click", (e) => {
       e.preventDefault();
-      if (started) return;
-      started = true;
-
-      acceptBtn.style.display = "none"; // desaparece el botón
-      await startBackgroundAudio();
-      await typeAll();
+      if (!started){
+        started = true;
+        startBackgroundAudio();
+      }
+      typeAll();
     });
 
-    // ✅ Replay: reinicia el mensaje (música sigue)
-    replayBtn.addEventListener("click", async (e) => {
+    // ✅ Botón de abajo "Aceptar misión" ahora funciona como "reiniciar con música asegurada"
+    acceptBtn.addEventListener("click", (e) => {
       e.preventDefault();
-      await typeAll();
+      if (!started){
+        started = true;
+        startBackgroundAudio();
+      }
+      typeAll();
     });
 
     // ===== MATRIX RAIN =====
@@ -355,7 +351,7 @@
     }
     setInterval(drawMatrix, 40);
 
-    // Nota: ya no auto-iniciamos typeAll() para obligar el click y poder reproducir audio.
+    // Nota: no auto-iniciamos; ahora el botón superior dispara todo.
   </script>
 </body>
 </html>
