@@ -14,6 +14,15 @@
     }
     html,body{height:100%; margin:0; background:var(--bg); color:var(--green); font-family:var(--mono);}
 
+    /* ===== MATRIX CANVAS ===== */
+    #matrix{
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.25;
+    }
+
     /* Fondo tipo “scanlines” */
     body::before{
       content:"";
@@ -29,6 +38,7 @@
       pointer-events:none;
       mix-blend-mode:screen;
       opacity:.35;
+      z-index: 1;
     }
 
     /* Sutil “viñeta” */
@@ -37,6 +47,7 @@
       position:fixed; inset:-40px;
       background:radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,.75) 70%, rgba(0,0,0,.95) 100%);
       pointer-events:none;
+      z-index: 2;
     }
 
     .wrap{
@@ -46,6 +57,8 @@
       justify-content:center;
       padding:24px;
       box-sizing:border-box;
+      position: relative;
+      z-index: 3;
     }
     .terminal{
       width:min(920px, 100%);
@@ -75,11 +88,8 @@
       word-break:break-word;
       text-shadow: var(--glow);
 
-      /* ✅ Scroll automático posible */
       max-height: 75vh;
       overflow-y: auto;
-
-      /* scroll suave */
       scroll-behavior: smooth;
     }
 
@@ -118,6 +128,10 @@
   </style>
 </head>
 <body>
+
+  <!-- MATRIX BACKGROUND -->
+  <canvas id="matrix"></canvas>
+
   <div class="wrap">
     <div>
       <div class="terminal" role="img" aria-label="Terminal de misión">
@@ -183,9 +197,9 @@
     ];
 
     // Velocidades (ms)
-    const TYPE_SPEED = 55;      // velocidad de letras
-    const LINE_DELAY = 450;     // pausa entre líneas
-    const BOOT_DELAY = 650;     // pausa inicial
+    const TYPE_SPEED = 55;
+    const LINE_DELAY = 450;
+    const BOOT_DELAY = 650;
 
     // ==== Motor de tecleo ====
     const screen = document.getElementById("screen");
@@ -193,7 +207,6 @@
 
     function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
-    // ✅ Auto-scroll: siempre baja al final
     function scrollToBottom() {
       screen.scrollTop = screen.scrollHeight;
     }
@@ -210,11 +223,11 @@
       for (const line of LINES){
         for (let i = 0; i < line.length; i++){
           cursor.insertAdjacentText("beforebegin", line[i]);
-          scrollToBottom(); // ✅ baja conforme escribe
+          scrollToBottom();
           await sleep(TYPE_SPEED + Math.random()*12);
         }
         cursor.insertAdjacentText("beforebegin", "\n");
-        scrollToBottom(); // ✅ baja al cambiar de línea
+        scrollToBottom();
         await sleep(LINE_DELAY);
       }
 
@@ -226,6 +239,42 @@
       e.preventDefault();
       typeAll();
     });
+
+    // ===== MATRIX RAIN =====
+    const canvas = document.getElementById("matrix");
+    const ctx = canvas.getContext("2d");
+
+    function resizeCanvas(){
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+
+    const letters = "アカサタナハマヤラワ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$#@";
+    const fontSize = 18;
+    let columns = Math.floor(canvas.width / fontSize);
+    let drops = Array(columns).fill(1);
+
+    function drawMatrix(){
+      ctx.fillStyle = "rgba(0, 0, 0, 0.08)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "#00ff66";
+      ctx.font = fontSize + "px monospace";
+
+      for (let i = 0; i < drops.length; i++){
+        const text = letters[Math.floor(Math.random() * letters.length)];
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975){
+          drops[i] = 0;
+        }
+        drops[i]++;
+      }
+    }
+
+    setInterval(drawMatrix, 40);
 
     // Auto-inicio al abrir
     typeAll();
