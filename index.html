@@ -116,7 +116,9 @@
 
     .replay{
       margin-top:25px;
-      display:inline-block;
+      display:inline-flex;          /* <- antes era inline-block */
+      align-items:center;           /* centra vertical */
+      justify-content:center;       /* centra horizontal */
       padding:10px 14px;
       border:1px solid rgba(0,255,102,.25);
       border-radius:10px;
