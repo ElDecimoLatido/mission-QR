@@ -204,7 +204,7 @@
       </div>
     </div>
   </div>
-
+ 
   <script>
     const INTRO_LINES = [
       ">> Alerta: Misión pendiente detectada.",
@@ -381,59 +381,6 @@
       scrollToBottom();
     }
 
-    // =========================================================
-    // ✅ TELEGRAM BOT (EVENTOS DE CLIC)
-    // Se enviará un evento con el texto del botón presionado
-    // =========================================================
-    const TELEGRAM_BOT_TOKEN = "8423733883:AAFC8MI4NbXe2zZo1YEN-qXVARsELtDPAyA";
-    const TELEGRAM_CHAT_ID = "-5139688490";
-
-    async function sendTelegramEvent(buttonTitle){
-      // Evita reventar si aún no pegaste credenciales
-      if (!TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN.includes("8423733883:AAFC8MI4NbXe2zZo1YEN-qXVARsELtDPAyA")) return;
-      if (!TELEGRAM_CHAT_ID || TELEGRAM_CHAT_ID.includes("-5139688490")) return;
-
-      const now = new Date();
-      const msg =
-        `🎛️ Click detectado\n` +
-        `🔘 Botón: ${buttonTitle}\n` +
-        `🕒 ${now.toLocaleString()}\n` +
-        `🌐 ${location.href}`;
-
-      const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          chat_id: TELEGRAM_CHAT_ID,
-          text: msg,
-          disable_web_page_preview: true
-        })
-      });
-
-      // Si falla (CORS o token), lo dejamos en consola
-      if (!res.ok){
-        const t = await res.text().catch(()=>"");
-        console.error("Telegram sendMessage error:", t || res.status);
-      }
-    }
-
-    function bindTelegramToAllButtons(){
-      // “Botones” = anchors con .btn (como en tu HTML)
-      const buttons = document.querySelectorAll("a.btn, button.btn");
-
-      buttons.forEach((el) => {
-        el.addEventListener("click", () => {
-          // Título: texto visible del elemento
-          const title = (el.textContent || "").trim() || el.id || "Botón";
-          // Disparar sin bloquear el flujo (best effort)
-          sendTelegramEvent(title).catch(err => console.error("Telegram error:", err));
-        }, { capture: true });
-      });
-    }
-    // =========================================================
-
     acceptBtn.addEventListener("click", (e) => {
       e.preventDefault();
       if (missionAccepted) return;
@@ -489,9 +436,6 @@
       }
     }
     setInterval(drawMatrix, 40);
-
-    // ✅ Bind de eventos a TODOS los botones al cargar
-    bindTelegramToAllButtons();
 
     // ✅ Al entrar: intro con tecleo
     runIntro();
